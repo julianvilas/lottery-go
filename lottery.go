@@ -2,7 +2,6 @@ package lottery
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,47 +11,39 @@ import (
 
 const api = "http://api.elpais.com/ws/LoteriaNavidadPremiados"
 
-func CheckNumber(n int) (int, error) {
-	ns := strconv.Itoa(n)
-	u := fmt.Sprintf("%s?n=%s", api, ns)
+func CheckNumbers(numbers ...int) (res []SearchResponse, err error) {
+	for _, n := range numbers {
+		ns := strconv.Itoa(n)
+		u := fmt.Sprintf("%s?n=%s", api, ns)
 
-	resp, err := http.Get(u)
-	if err != nil {
-		return 0, err
+		resp, err := http.Get(u)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		elems := strings.Split(string(body), "=")
+		if len(elems) != 2 || elems[0] != "busqueda" {
+			return nil, fmt.Errorf("unknown response format: %s", body)
+		}
+
+		sr, err := decodeSearchResponse(elems[1])
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, sr)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	elems := strings.Split(string(body), "=")
-	if len(elems) != 2 || elems[0] != "busqueda" {
-		return 0, fmt.Errorf("unknown response format: %s", body)
-	}
-
-	sr, err := decodeSearchResponse(elems[1])
-	if err != nil {
-		return 0, err
-	}
-
-	if sr.Error != 0 {
-		return 0, fmt.Errorf("api returned error: %v", sr.Error)
-	}
-
-	if sr.Status < 0 || sr.Status > 4 {
-		return 0, fmt.Errorf("api returned unknown status: %v", sr.Status)
-	}
-
-	if sr.Status == 0 {
-		return 0, errors.New("raffle hasn't started yet")
-	}
-
-	return sr.Prize, nil
+	return res, nil
 }
 
-type searchResponse struct {
+type SearchResponse struct {
 	Num       int `json:"numero"`
 	Prize     int `json:"premio"`
 	Timestamp int `json:"timestamp"`
@@ -60,8 +51,8 @@ type searchResponse struct {
 	Error     int `json:"error"`
 }
 
-func decodeSearchResponse(j string) (searchResponse, error) {
-	var res searchResponse
+func decodeSearchResponse(j string) (SearchResponse, error) {
+	var res SearchResponse
 	err := json.Unmarshal([]byte(j), &res)
 	return res, err
 }

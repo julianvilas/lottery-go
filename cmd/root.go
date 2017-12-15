@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -28,4 +29,17 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "prints verbose information during command execution")
+}
+
+func stringToInt(s ...string) (res []int, err error) {
+	for _, str := range s {
+		n, err := strconv.Atoi(str)
+		if err != nil {
+			return nil, fmt.Errorf("not a number: %v", str)
+		}
+
+		res = append(res, n)
+	}
+
+	return res, nil
 }
