@@ -45,7 +45,7 @@ In order to send the email, the command is using [AWS SES](https://aws.amazon.co
 
 ## Library
 
-The library function CheckNumbers accept a list of numbers as a variadic list of arguments and returns an array with the parsed response of the EL PAIS API.
+The library function `CheckNumbers` accept a list of numbers as a variadic list of arguments and returns an array with the parsed response of the EL PAIS API.
 
 ```go
 var n int = 11111 
