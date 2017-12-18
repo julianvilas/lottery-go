@@ -13,13 +13,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var region string
+
 // monitor represents the monitor command
 var monitorCmd = &cobra.Command{
 	Use:   "monitor <email> <number>...",
 	Short: "monitors your lottery numbers and notifies you",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
-			return fmt.Errorf("incorrect number of args, want 2, got %v", len(args))
+		if len(args) < 2 {
+			return fmt.Errorf("incorrect number of args, want 2 or more, got %v", len(args))
 		}
 
 		email := args[0]
@@ -35,12 +37,14 @@ var monitorCmd = &cobra.Command{
 }
 
 func init() {
+	monitorCmd.Flags().StringVarP(&region, "region", "r", "eu-west-1", "sets the aws-region to send the email using ses")
+
 	RootCmd.AddCommand(monitorCmd)
 }
 
 func monitor(email string, numbers []int) error {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("eu-west-1"),
+		Region: aws.String(region),
 	}))
 	svc := ses.New(sess)
 
@@ -81,6 +85,7 @@ func checkNumbers(gm *gmailer.Mailer, email string, numbers []int) (nums []int, 
 		log.Printf("%+v", res)
 	}
 
+loop:
 	for _, sr := range res {
 		switch {
 		case sr.Error != 0:
@@ -91,7 +96,7 @@ func checkNumbers(gm *gmailer.Mailer, email string, numbers []int) (nums []int, 
 			if verbose {
 				log.Println("raffle has not started yet. Skipping...")
 			}
-			break
+			break loop
 		case sr.Prize > 0:
 			if err := gm.SendRaw(gmailer.Email{
 				Subject: "Number has been awarded",
